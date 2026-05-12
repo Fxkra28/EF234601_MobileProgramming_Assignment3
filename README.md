@@ -188,4 +188,4 @@ Permission denial shows an inline amber callout with a **Settings** button that 
 
 ---
 ## Demo Video
-[![Demo Video](https://img.youtube.com/vi/ctu822veJ-g?si=K780Ua6o4wJ5NGUj/maxresdefault.jpg)](https://youtu.be/ctu822veJ-g?si=K780Ua6o4wJ5NGUj)
+[![Watch the video](https://img.youtube.com/vi/ctu822veJ-g/maxresdefault.jpg)](https://youtu.be/ctu822veJ-g?si=K780Ua6o4wJ5NGUj)
