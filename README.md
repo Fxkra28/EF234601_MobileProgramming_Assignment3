@@ -1,0 +1,223 @@
+# Tugas PPB 3 — Personal Buddy
+
+> | Field | Value |
+> |---|---|
+> | **Name** |Muiz SUrya Fata |
+> | **NRP/Student-ID** | 5025231005 |
+> | **App Name** | Personal Buddy |
+> | **Course** | EF236401_Mobile Programming |
+> | **Lecturer** | Agus Budi Raharjo, S.Kom, M.Kom., Ph.D |
+
+I built **Personal Buddy**, a Flutter personal assistant that wraps Anthropic's Claude API with three distinct model a conversational chat (like a smart friend), a dedicated grammar coach, and a camera-based reviewer that flags errors in text I photograph.
+
+The differentiator from a plain LLM-chat clone is the **grammar + image-aware correction**. Personal Buddy isn't just a chatbot. It's positioned as a smart daily companion that helps me communicate better, not just answer questions.
+
+I designed it to satisfy these capabilities:
+
+| # | Requirement | How I covered it |
+|---|---|---|
+| 1 | **AI integration via 3rd-party API** | Claude API (Anthropic Messages API + **Tool Use** for structured output). Three different system prompts and tools — `assistantChat` (free-form reply), `return_grammar_correction` (corrected text + categorized changes), `return_image_analysis` (vision: summary + observations + corrections). Prompt caching on the assistant system prompt so multi-turn chat is ~90% cheaper. |
+| 2 | **Firebase Authentication** | Email/password sign-in, register, forgot-password, sign-out. `AuthGate` uses `FirebaseAuth.instance.currentUser` as `initialData` for the stream so the splash never sits forever. Auth errors are mapped to friendly messages instead of raw Firebase codes. |
+| 3 | **Storing data in Firestore** | Each conversation is its own sub-collection under `users/{uid}/conversations/{convId}/messages/`. Rename, delete, and lazy-create-on-first-send all sync through Firestore. Rules use **test mode** (open until 2026-12-31) since this is coursework. |
+| 4 | **Smartphone resources** | **Microphone** via `speech_to_text` — used by the polished `BreathingMicButton` (soft pulsing ring while listening, haptic feedback, auto-stop on silence). **Camera** via `image_picker` — captures or picks an image, sends raw bytes (base64) to Claude's vision endpoint for context-aware correction. Permissions are **contextual** — requested only the first time the user activates the feature. |
+| 5 | **Polished navigation & UX** | 4-tab `NavigationBar` (Chat / Grammar / Camera / Profile) backed by an `IndexedStack` so each tab keeps its state. ChatGPT-style drawer with conversation history (rename / delete / new chat). Enter-to-submit in Grammar. Tap-outside / swipe-down keyboard dismissal everywhere so the user is never trapped by the keyboard. |
+
+---
+
+## How to run it
+
+### 1. Hook up your Firebase project
+
+I used the free Spark plan. In the [Firebase console](https://console.firebase.google.com), create a project and turn on:
+
+- **Authentication → Sign-in method → Email/Password**
+- **Firestore Database** (Test mode, region `asia-southeast2 (Jakarta)`)
+
+I don't use Storage or Cloud Messaging — chat messages are text-only and live in Firestore, image captures stay on the device.
+
+### 2. Generate the platform configs
+
+```bash
+brew install firebase-cli                  # or: npm install -g firebase-tools
+dart pub global activate flutterfire_cli
+firebase login
+
+cd /path/to/tugasppb3
+flutterfire configure                       # pick your Firebase project, target android + ios
+```
+
+That writes `lib/firebase_options.dart`, `android/app/google-services.json`, and `ios/Runner/GoogleService-Info.plist`.
+
+### 3. Deploy the Firestore rules
+
+Paste this into Firestore → **Rules** in the console and **Publish**:
+
+```js
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if request.time < timestamp.date(2026, 12, 31);
+    }
+  }
+}
+```
+
+These are intentionally permissive — this is a coursework / development build, not a production deployment. I locked it to expire at the end of 2026 so it'll auto-deny later if I forget about it.
+
+### 4. Drop in the Anthropic API key
+
+```bash
+cp .env.example .env
+# then edit .env and paste your key from https://console.anthropic.com/
+```
+
+The `.env` file is gitignored. The Dart side loads it via `flutter_dotenv` and reads `ANTHROPIC_API_KEY` + `ANTHROPIC_MODEL` (defaults to `claude-sonnet-4-6`).
+
+### 5. Install and launch
+
+```bash
+flutter pub get
+cd ios && pod install && cd ..
+flutter run --profile
+```
+
+See the next section for **why `--profile` and not plain `flutter run`**.
+
+---
+
+## Why `--profile` instead of plain `flutter run`?
+
+My iPhone is on iOS 26.4.2, and Flutter's debug-mode JIT crashes immediately on launch because iOS 26 has hardened executable-memory rules that don't allow JIT-compiled code. The error looks like `SIGKILL` during `dyld` load, or `EXC_BAD_ACCESS code=50` once Dart `main()` starts. Either way it's iOS's App Watchdog killing the process — not a bug in the app.
+
+I work around it by running in **profile mode**, which uses AOT-compiled native code:
+
+```bash
+flutter run --profile        # on the iPhone — works
+flutter run --release        # also works (no DevTools attach)
+```
+
+Hot-reload is off in profile mode but I can hot-restart with capital **R** in the terminal. Builds take about 2–3 minutes from cold.
+
+For day-to-day development I use the iOS Simulator where plain debug mode works fine (macOS allows JIT):
+
+```bash
+open -a Simulator
+flutter run                  # in the Simulator — works, with hot reload
+```
+
+| Where | Command | Hot reload |
+|---|---|---|
+| iOS Simulator | `flutter run` | ✅ |
+| iPhone (testing) | `flutter run --profile` | ❌ |
+| iPhone (demo) | `flutter run --release` | ❌ |
+| iPhone (debug) | (do not use — SIGKILL) | — |
+
+---
+
+## Project layout
+
+```
+lib/
+├── main.dart                       # Firebase init, dotenv, Provider tree
+├── firebase_options.dart           # generated by flutterfire configure
+│
+├── core/
+│   ├── constants.dart              # AppConstants, ChatMode enum, STT defaults
+│   ├── env.dart                    # ANTHROPIC_API_KEY / model loader
+│   └── theme.dart                  # Material 3 with seed color
+│
+├── models/
+│   ├── user_profile.dart           # uid, email, displayName, createdAt
+│   ├── conversation.dart           # ChatGPT-style thread metadata
+│   └── message.dart                # ChatMessage + GrammarCorrection + GrammarChange + VisionAnalysis
+│
+├── services/                       # Stateless platform / cloud wrappers
+│   ├── auth_service.dart           # FirebaseAuth + error mapping
+│   ├── firestore_service.dart      # profile + conversations + messages
+│   ├── claude_chat_service.dart    # Anthropic Messages API (3 modes + Tool Use + prompt caching)
+│   ├── stt_service.dart            # speech_to_text wrapper with silence-timeout
+│   └── camera_service.dart         # image_picker + permission_handler
+│
+├── providers/                      # Stateful layer (ChangeNotifier)
+│   ├── auth_provider.dart
+│   ├── profile_provider.dart       # ensures profile doc + retry path
+│   ├── chat_provider.dart          # multi-conversation: list, current, messages stream
+│   ├── grammar_provider.dart       # one-shot grammar checks
+│   └── camera_provider.dart        # capture/pick → analyze → result
+│
+├── screens/
+│   ├── auth/
+│   │   ├── auth_gate.dart          # routes to login or HomeShell
+│   │   ├── login_screen.dart
+│   │   └── signup_screen.dart
+│   └── home/
+│       ├── home_shell.dart         # 4-tab NavigationBar + IndexedStack
+│       ├── chat_screen.dart        # drawer (history + new chat) + Enter-to-send
+│       ├── grammar_screen.dart     # Enter-to-check + Cancel + result cards
+│       ├── camera_screen.dart      # capture / pick → vision analysis
+│       └── profile_screen.dart
+│
+└── widgets/
+    ├── breathing_mic_button.dart   # pulsing ring + haptics + auto-stop on silence
+    ├── correction_card.dart        # strikethrough → corrected + categorized explanation
+    └── dismiss_keyboard.dart       # tap-outside-to-unfocus wrapper
+```
+
+### Firestore data model
+
+```
+users/
+  {uid}/                                  #profile doc uid, email, displayName, createdAt
+    conversations/{convId}                #title, createdAt, lastMessageAt, lastMessagePreview 
+      messages/{msgId}                    role, text, createdAt
+```
+
+I kept Firestore as nested sub-collections so test-mode rules trivially cover the whole user subtree, and so a conversation deletion can batch-delete its messages without composite indexes.
+
+### How the chat flow works
+
+```
+sendMessage(text)
+  ↓
+[if no current conversation]  cloud.createConversation(title=auto)
+  ↓
+cloud.addMessage(role=user, text)              ← syncs to Firestore
+  ↓
+[if conversation still titled "New chat"]  rename to first-message snippet
+  ↓
+claude.assistantChat(history)                  ← Anthropic Messages API with prompt caching
+  ↓
+cloud.addMessage(role=assistant, text=reply)   ← writes back
+```
+
+Grammar and Camera modes are **single-shot** — no conversation history is persisted; the input flows directly into Claude via the `return_grammar_correction` / `return_image_analysis` tools and the result renders in-screen.
+
+---
+
+## How I demo each capability
+
+### 1 — Three Claude modes
+
+- **Chat tab**: type "what should I eat tonight?" → Personal Buddy answers conversationally, no grammar correction in chat.
+- **Grammar tab**: type "She don't likes apples" → press Enter → corrected text + a "grammar" change card explaining `don't likes → doesn't like`.
+- **Camera tab**: photograph a sign with a typo (e.g. "ENTRENCE") → Personal Buddy flags it as a spelling correction with the suggested fix.
+
+All three modes use Claude's **Tool Use** so the JSON response is schema-validated before parsing — no flaky `jsonDecode` on free-form text.
+
+### 2 — Firebase Auth
+
+Register a new email → sign in → sign out → tap **Forgot password?** on login (sends a real reset email) → delete account from Profile. Errors like wrong password show a friendly snackbar.
+
+### 3 — Firestore
+
+Open Firebase console → expand `users/{uid}/conversations` → every chat is a doc, every message in the sub-collection. Rename a chat from the drawer → the `title` field updates in real time. Delete a chat → both the conversation doc and its messages sub-collection vanish in one batch.
+
+### 4 — Microphone + Camera
+
+- **Mic**: tap the mic button on Chat or Grammar → it pulses with a soft breathing ring → I speak → final transcript drops into the input. Auto-stops after 2s of silence. Haptic feedback on start/stop.
+- **Camera**: tap **Take photo** on the Camera tab → grant permission (first time only) → preview shows → optionally add a context hint like "this is a restaurant menu" → tap **Analyze image** → Claude returns observations + corrections.
+
+Permission denial shows an inline amber callout with a **Settings** button that deep-links to iOS Settings — no upfront prompts on app launch.
+
+---

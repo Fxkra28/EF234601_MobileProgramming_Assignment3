@@ -1,0 +1,49 @@
+name: tugasppb3
+description: "Personal Buddy — AI personal assistant with grammar coach + camera correction"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # App-wide state management and date/number formatting helpers.
+  provider: ^6.1.2
+  intl: ^0.19.0
+
+  # Firebase backend: authentication and the Firestore document store.
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.4
+
+  # Local storage and filesystem path helpers used for on-device caching.
+  sqflite: ^2.3.3
+  path: ^1.9.0
+  path_provider: ^2.1.4
+
+  # Hardware integrations: microphone for speech input, camera for image capture,
+  # and the permission flow that gates both.
+  speech_to_text: ^7.0.0
+  image_picker: ^1.1.2
+  permission_handler: ^11.3.1
+
+  # Connectivity monitoring and the HTTP client used to call the Anthropic API.
+  connectivity_plus: ^6.0.5
+  http: ^1.2.2
+
+  # Loads ANTHROPIC_API_KEY and other secrets from a local .env file at startup.
+  flutter_dotenv: ^5.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env
