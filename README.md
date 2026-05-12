@@ -1,4 +1,4 @@
-# Tugas PPB 3 — Personal Buddy
+# Assigmnet3 — Personal Buddy
 
 > | Field | Value |
 > |---|---|
@@ -47,24 +47,7 @@ flutterfire configure                       # pick your Firebase project, target
 
 That writes `lib/firebase_options.dart`, `android/app/google-services.json`, and `ios/Runner/GoogleService-Info.plist`.
 
-### 3. Deploy the Firestore rules
-
-Paste this into Firestore → **Rules** in the console and **Publish**:
-
-```js
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2026, 12, 31);
-    }
-  }
-}
-```
-
-These are intentionally permissive — this is a coursework / development build, not a production deployment. I locked it to expire at the end of 2026 so it'll auto-deny later if I forget about it.
-
-### 4. Drop in the Anthropic API key
+### 3. Drop in the Anthropic API key
 
 ```bash
 cp .env.example .env
@@ -97,22 +80,6 @@ flutter run --release        # also works (no DevTools attach)
 ```
 
 Hot-reload is off in profile mode but I can hot-restart with capital **R** in the terminal. Builds take about 2–3 minutes from cold.
-
-For day-to-day development I use the iOS Simulator where plain debug mode works fine (macOS allows JIT):
-
-```bash
-open -a Simulator
-flutter run                  # in the Simulator — works, with hot reload
-```
-
-| Where | Command | Hot reload |
-|---|---|---|
-| iOS Simulator | `flutter run` | ✅ |
-| iPhone (testing) | `flutter run --profile` | ❌ |
-| iPhone (demo) | `flutter run --release` | ❌ |
-| iPhone (debug) | (do not use — SIGKILL) | — |
-
----
 
 ## Project layout
 
@@ -151,16 +118,16 @@ lib/
 │   │   ├── login_screen.dart
 │   │   └── signup_screen.dart
 │   └── home/
-│       ├── home_shell.dart         # 4-tab NavigationBar + IndexedStack
-│       ├── chat_screen.dart        # drawer (history + new chat) + Enter-to-send
-│       ├── grammar_screen.dart     # Enter-to-check + Cancel + result cards
-│       ├── camera_screen.dart      # capture / pick → vision analysis
+│       ├── home_shell.dart         #4-tab NavigationBar + IndexedStack
+│       ├── chat_screen.dart        #drawer (history + new chat) + Enter-to-send
+│       ├── grammar_screen.dart     #Enter-to-check + Cancel + result cards
+│       ├── camera_screen.dart      #capture / pick → vision analysis
 │       └── profile_screen.dart
 │
 └── widgets/
-    ├── breathing_mic_button.dart   # pulsing ring + haptics + auto-stop on silence
-    ├── correction_card.dart        # strikethrough → corrected + categorized explanation
-    └── dismiss_keyboard.dart       # tap-outside-to-unfocus wrapper
+    ├── breathing_mic_button.dart   #pulsing ring + haptics + auto-stop on silence
+    ├── correction_card.dart        #strikethrough → corrected + categorized explanation
+    └── dismiss_keyboard.dart       #tap-outside-to-unfocus wrapper
 ```
 
 ### Firestore data model
@@ -198,25 +165,27 @@ Grammar and Camera modes are **single-shot** — no conversation history is pers
 
 ### 1 — Three Claude modes
 
-- **Chat tab**: type "what should I eat tonight?" → Personal Buddy answers conversationally, no grammar correction in chat.
-- **Grammar tab**: type "She don't likes apples" → press Enter → corrected text + a "grammar" change card explaining `don't likes → doesn't like`.
-- **Camera tab**: photograph a sign with a typo (e.g. "ENTRENCE") → Personal Buddy flags it as a spelling correction with the suggested fix.
+- **Chat tab**: type "what should I eat tonight?" -> Personal Buddy answers conversationally, no grammar correction in chat.
+- **Grammar tab**: type "She don't likes apples" -> press Enter -> corrected text + a "grammar" change card explaining `don't likes → doesn't like`.
+- **Camera tab**: photograph a sign with a typo (e.g. "ENTRENCE") -> Personal Buddy flags it as a spelling correction with the suggested fix.
 
-All three modes use Claude's **Tool Use** so the JSON response is schema-validated before parsing — no flaky `jsonDecode` on free-form text.
+All three modes use Claude's **Tool Use** so the JSON response is schema-validated before parsing, no flaky `jsonDecode` on free-form text.
 
 ### 2 — Firebase Auth
 
-Register a new email → sign in → sign out → tap **Forgot password?** on login (sends a real reset email) → delete account from Profile. Errors like wrong password show a friendly snackbar.
+Register a new email -> sign in -> sign out -> tap **Forgot password?** on login (sends a real reset email) -> delete account from Profile. Errors like wrong password show a friendly snackbar.
 
 ### 3 — Firestore
 
-Open Firebase console → expand `users/{uid}/conversations` → every chat is a doc, every message in the sub-collection. Rename a chat from the drawer → the `title` field updates in real time. Delete a chat → both the conversation doc and its messages sub-collection vanish in one batch.
+Open Firebase console -> expand `users/{uid}/conversations` ->  every chat is a doc, every message in the sub-collection. Rename a chat from the drawer -> the `title` field updates in real time. Delete a chat -> both the conversation doc and its messages sub-collection vanish in one batch.
 
 ### 4 — Microphone + Camera
 
-- **Mic**: tap the mic button on Chat or Grammar → it pulses with a soft breathing ring → I speak → final transcript drops into the input. Auto-stops after 2s of silence. Haptic feedback on start/stop.
-- **Camera**: tap **Take photo** on the Camera tab → grant permission (first time only) → preview shows → optionally add a context hint like "this is a restaurant menu" → tap **Analyze image** → Claude returns observations + corrections.
+- **Mic**: tap the mic button on Chat or Grammar -> it pulses with a soft breathing ring -> I speak -> final transcript drops into the input. Auto-stops after 2s of silence. Haptic feedback on start/stop.
+- **Camera**: tap **Take photo** on the Camera tab -> grant permission (first time only) -> preview shows -> optionally add a context hint like "this is a restaurant menu" -> tap **Analyze image** -> Claude returns observations + corrections.
 
-Permission denial shows an inline amber callout with a **Settings** button that deep-links to iOS Settings — no upfront prompts on app launch.
+Permission denial shows an inline amber callout with a **Settings** button that deep-links to iOS Settings, no upfront prompts on app launch.
 
 ---
+## Demo Video
+[![Demo Video](https://img.youtube.com/vi/ctu822veJ-g?si=K780Ua6o4wJ5NGUj/maxresdefault.jpg)](https://youtu.be/ctu822veJ-g?si=K780Ua6o4wJ5NGUj)
