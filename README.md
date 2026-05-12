@@ -20,7 +20,6 @@ I designed it to satisfy these capabilities:
 | 2 | **Firebase Authentication** | Email/password sign-in, register, forgot-password, sign-out. `AuthGate` uses `FirebaseAuth.instance.currentUser` as `initialData` for the stream so the splash never sits forever. Auth errors are mapped to friendly messages instead of raw Firebase codes. |
 | 3 | **Storing data in Firestore** | Each conversation is its own sub-collection under `users/{uid}/conversations/{convId}/messages/`. Rename, delete, and lazy-create-on-first-send all sync through Firestore. Rules use **test mode** (open until 2026-12-31) since this is coursework. |
 | 4 | **Smartphone resources** | **Microphone** via `speech_to_text` — used by the polished `BreathingMicButton` (soft pulsing ring while listening, haptic feedback, auto-stop on silence). **Camera** via `image_picker` — captures or picks an image, sends raw bytes (base64) to Claude's vision endpoint for context-aware correction. Permissions are **contextual** — requested only the first time the user activates the feature. |
-| 5 | **Polished navigation & UX** | 4-tab `NavigationBar` (Chat / Grammar / Camera / Profile) backed by an `IndexedStack` so each tab keeps its state. ChatGPT-style drawer with conversation history (rename / delete / new chat). Enter-to-submit in Grammar. Tap-outside / swipe-down keyboard dismissal everywhere so the user is never trapped by the keyboard. |
 
 ---
 
