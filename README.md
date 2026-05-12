@@ -169,7 +169,7 @@ lib/
 users/
   {uid}/                                  #profile doc uid, email, displayName, createdAt
     conversations/{convId}                #title, createdAt, lastMessageAt, lastMessagePreview 
-      messages/{msgId}                    role, text, createdAt
+      messages/{msgId}                    #role, text, createdAt
 ```
 
 I kept Firestore as nested sub-collections so test-mode rules trivially cover the whole user subtree, and so a conversation deletion can batch-delete its messages without composite indexes.
@@ -181,13 +181,13 @@ sendMessage(text)
   ↓
 [if no current conversation]  cloud.createConversation(title=auto)
   ↓
-cloud.addMessage(role=user, text)              ← syncs to Firestore
+cloud.addMessage(role=user, text)              #syncs to Firestore
   ↓
 [if conversation still titled "New chat"]  rename to first-message snippet
   ↓
-claude.assistantChat(history)                  ← Anthropic Messages API with prompt caching
+claude.assistantChat(history)                  #Anthropic Messages API with prompt caching
   ↓
-cloud.addMessage(role=assistant, text=reply)   ← writes back
+cloud.addMessage(role=assistant, text=reply)   #writes back
 ```
 
 Grammar and Camera modes are **single-shot** — no conversation history is persisted; the input flows directly into Claude via the `return_grammar_correction` / `return_image_analysis` tools and the result renders in-screen.
